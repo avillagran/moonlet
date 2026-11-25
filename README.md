@@ -25,8 +25,9 @@ Live picture-in-picture for anything on your Omarchy desktop: a whole window, a 
 | Picker | `S` / `Enter` / `Esc` | Whole screen / what is highlighted / cancel |
 | PiP | Drag | Move it; it snaps to edges and corners |
 | PiP | Drag an edge or corner | Resize, keeping its shape; the opposite side stays put |
-| PiP | `Ctrl`+drag an edge | Crop: show more or less of the source |
-| PiP | Wheel / `Ctrl`+wheel | Resize / change opacity |
+| PiP | Right-drag an edge or corner | Crop: show more or less of the source |
+| PiP | Wheel | Resize |
+| Opacity button | Click / wheel | Step through opacities / set it finely |
 | PiP | Double click | Jump to the source window |
 | PiP | Right click / middle click | Dock it in the bar / close it |
 | PiP | Hover | Buttons: go to source, click through, opacity, every workspace or one, dock, close |
@@ -63,7 +64,7 @@ Open the panel and unfold **Settings**, or edit `~/.config/omapip/settings.json`
 | `visibility` | `all`, `workspace`: where new PiPs show | `all` |
 | `size` | `small`, `medium`, `large`: starting width | `medium` |
 | `corner` | `tl`, `tr`, `bl`, `br`: where new PiPs land | `br` |
-| `hover` | `grow`, `ghost` (fades so you can see under it), `dodge` (jumps to the other side; hold `Alt` to grab it), `none` | `grow` |
+| `hover` | `grow`, `ghost` (fades so you can see under it), `dodge` (jumps to the other side after a moment; press quickly to grab it), `none` | `grow` |
 | `hoverScale` | 1.05 to 2.5 | 1.35 |
 | `opacity` | 0.15 to 1 | 1 |
 | `radius` | -1 (follow Hyprland's rounding) to 64 | -1 |

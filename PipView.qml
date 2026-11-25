@@ -332,13 +332,17 @@ Item {
             enabled: root.interactive
             hoverEnabled: true
             preventStealing: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: zone.isCorner
               ? ((zone.hasT === zone.hasL) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
               : (zone.hasL || zone.hasR ? Qt.SizeHorCursor : Qt.SizeVerCursor)
             onContainsMouseChanged: root.handleHover = containsMouse
             onPressed: function(m) {
               var p = mapToItem(root.host ? root.host.stage : null, m.x, m.y)
-              root.beginResize(zone.modelData, p.x, p.y, !zone.isCorner && (m.modifiers & Qt.ControlModifier))
+              // The layer never takes keyboard focus (it would steal it from
+              // the window you work in), so modifiers rarely reach it: the
+              // right button is the reliable way to crop.
+              root.beginResize(zone.modelData, p.x, p.y, m.button === Qt.RightButton || (m.modifiers & Qt.ControlModifier))
             }
             onPositionChanged: function(m) {
               if (!pressed) return
@@ -358,8 +362,9 @@ Item {
         height: sizeLabel.implicitHeight + Style.space(8)
         radius: height / 2
         color: Qt.rgba(0, 0, 0, 0.62)
-        opacity: root.resizing ? 1 : 0
-        scale: root.resizing ? 1 : 0.85
+        readonly property bool hinting: !root.resizing && root.handleHover && root.interactive
+        opacity: root.resizing || hinting ? 1 : 0
+        scale: root.resizing || hinting ? 1 : 0.85
         visible: opacity > 0.01
         Behavior on opacity { NumberAnimation { duration: root.dur(140) } }
         Behavior on scale { NumberAnimation { duration: root.dur(180); easing.type: root.springType } }
@@ -370,7 +375,8 @@ Item {
           color: "white"
           font.family: Style.font.family
           font.pixelSize: Style.font.bodySmall
-          text: (root.cropMode ? root.t("pip.crop", "Crop") + "  " : "") + Math.round(root.gw) + " × " + Math.round(root.gh)
+          text: !root.resizing ? root.t("pip.resizeHint", "Drag: size · Right-drag: crop")
+            : (root.cropMode ? root.t("pip.crop", "Crop") + "  " : "") + Math.round(root.gw) + " × " + Math.round(root.gh)
         }
       }
     }
@@ -466,6 +472,12 @@ Item {
               id: btnMouse
               anchors.fill: parent
               hoverEnabled: true
+              // The wheel over the opacity button sets the opacity.
+              onWheel: function(w) {
+                if (btn.modelData !== "opacity" || !root.service || !root.pip) { w.accepted = false; return }
+                var o = Math.max(0.15, Math.min(1, root.pip.opacity + (w.angleDelta.y / 120) * 0.05))
+                root.service.updatePip(root.pipId, { opacity: o })
+              }
               cursorShape: Qt.PointingHandCursor
               onContainsMouseChanged: {
                 root.chromeHover = containsMouse
@@ -556,7 +568,7 @@ Item {
     property real pressGY: 0
 
     onPositionChanged: function(m) {
-      if (root.settings.hover === "dodge" && !pressed && !(m.modifiers & Qt.AltModifier)) { root.dodge(); return }
+      if (root.settings.hover === "dodge" && !pressed) { if (!dodgeDelay.running && !root.dodgedRecently) dodgeDelay.restart(); return }
       if (!pressed || !(m.buttons & Qt.LeftButton)) return
       var p = mapToItem(root.host ? root.host.stage : null, m.x, m.y)
       if (!root.dragging && Math.abs(p.x - pressGX) + Math.abs(p.y - pressGY) < 4) return
@@ -680,6 +692,12 @@ Item {
     service.updatePip(pipId, { x: c.x, y: c.y, width: Math.round(gw) })
   }
 
+  // Dodge after a beat, so a quick press can still grab the PiP.
+  Timer {
+    id: dodgeDelay
+    interval: 380
+    onTriggered: if (mouse.containsMouse && !mouse.pressed && !root.dragging && !root.resizing) root.dodge()
+  }
   property bool dodgedRecently: false
   Timer { id: dodgeCooldown; interval: 450; onTriggered: root.dodgedRecently = false }
   function dodge() {

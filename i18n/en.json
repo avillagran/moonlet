@@ -8,7 +8,7 @@
   "pip.allWorkspaces": "Every workspace",
   "pip.oneWorkspace": "Only this workspace",
   "pip.workspaceN": "Workspace %1",
-  "pip.opacity": "Opacity",
+  "pip.opacity": "Opacity (wheel)",
   "pip.clickThrough": "Click through",
   "pip.focus": "Go to source",
   "pip.sourceClosed": "Window closed",
@@ -100,9 +100,9 @@
   "help.visibility": "Whether a new PiP follows you to every workspace or stays on the one it was made on. Change it per PiP with the pin button.",
   "help.size": "How wide a new PiP starts, as a share of the screen. Resize it any time with the wheel.",
   "help.corner": "Where a new PiP lands. More PiPs stack beside it.",
-  "help.hover": "What a PiP does under the pointer: grow, fade away so you can see beneath it, jump to the other side (hold Alt to grab it), or nothing.",
+  "help.hover": "What a PiP does under the pointer: grow, fade away so you can see beneath it, jump to the other side after a moment (press quickly to grab it), or nothing.",
   "help.hoverScale": "How much a PiP grows on hover.",
-  "help.opacity": "Opacity of every PiP at rest. Ctrl+wheel changes one PiP.",
+  "help.opacity": "Opacity of every PiP at rest. The wheel over a PiP's opacity button changes just that one.",
   "help.radius": "Corner rounding. Auto follows Hyprland's rounding.",
   "help.border": "The frame around each PiP.",
   "help.animation": "How animated everything is. Calm matches the rest of the shell; omarchy toggle animations turns it all off.",
@@ -122,5 +122,6 @@
   "pip.crop": "Crop",
   "picker.tagRegion": "Region",
   "picker.tagWindow": "Window · drag for a region",
-  "picker.tagScreen": "Whole screen · drag for a region"
+  "picker.tagScreen": "Whole screen · drag for a region",
+  "pip.resizeHint": "Drag: size · Right-drag: crop"
 }

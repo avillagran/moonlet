@@ -8,7 +8,7 @@
   "pip.allWorkspaces": "Todos los escritorios",
   "pip.oneWorkspace": "Solo este escritorio",
   "pip.workspaceN": "Escritorio %1",
-  "pip.opacity": "Opacidad",
+  "pip.opacity": "Opacidad (rueda)",
   "pip.clickThrough": "Dejar pasar los clics",
   "pip.focus": "Ir al origen",
   "pip.sourceClosed": "Ventana cerrada",
@@ -100,9 +100,9 @@
   "help.visibility": "Si un PiP nuevo te sigue a todos los escritorios o se queda en el que lo creaste. Se cambia en cada PiP con el botón del pin.",
   "help.size": "El ancho inicial de un PiP nuevo, como parte de la pantalla. Se cambia cuando quieras con la rueda.",
   "help.corner": "Dónde aparece un PiP nuevo. Los siguientes se apilan a su lado.",
-  "help.hover": "Qué hace un PiP bajo el cursor: crecer, desvanecerse para ver lo de abajo, saltar al otro lado (mantén Alt para tomarlo) o nada.",
+  "help.hover": "Qué hace un PiP bajo el cursor: crecer, desvanecerse para ver lo de abajo, saltar al otro lado tras un instante (haz clic rápido para tomarlo) o nada.",
   "help.hoverScale": "Cuánto crece un PiP al pasar el cursor.",
-  "help.opacity": "Opacidad de todos los PiP en reposo. Ctrl+rueda cambia uno solo.",
+  "help.opacity": "Opacidad de todos los PiP en reposo. La rueda sobre el botón de opacidad de un PiP cambia solo ese.",
   "help.radius": "Redondeo de las esquinas. Automático usa el de Hyprland.",
   "help.border": "El marco de cada PiP.",
   "help.animation": "Cuánta animación hay. Tranquila se parece al resto del shell; omarchy toggle animations la apaga toda.",
@@ -122,5 +122,6 @@
   "pip.crop": "Recorte",
   "picker.tagRegion": "Región",
   "picker.tagWindow": "Ventana · arrastra para una región",
-  "picker.tagScreen": "Pantalla completa · arrastra para una región"
+  "picker.tagScreen": "Pantalla completa · arrastra para una región",
+  "pip.resizeHint": "Arrastra: tamaño · Clic derecho: recorte"
 }
