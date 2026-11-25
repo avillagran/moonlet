@@ -340,6 +340,56 @@ Item {
     setPips(pips.concat([pip]))
   }
 
+  // A PiP without the picker, for keybinds and scripts.
+  //   target: "screen" or "screen:NAME", a window address (0x...),
+  //           "class:TEXT" or "title:TEXT" (first match, case-insensitive)
+  //   rect:   "x,y,w,h" inside the window or screen in logical pixels, or
+  //           empty for all of it
+  // Returns the new PiP's id, or an error word.
+  function addFromSpec(target, rectText) {
+    if (pips.length >= Model.MAX_PIPS) return "limit"
+    var spec = String(target || "").trim()
+    var mons = Hyprland.monitors.values
+    var pick = null
+    if (spec === "screen" || spec.indexOf("screen:") === 0) {
+      var name = spec.length > 7 ? spec.slice(7) : (Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : fallbackScreen())
+      var mr = monitorRect(name)
+      if (!mr) return "no-screen"
+      pick = { kind: "screen", monitor: name, screen: name, monitorRect: mr }
+    } else {
+      Hyprland.refreshToplevels()
+      var list = Hyprland.toplevels.values
+      var lower = spec.toLowerCase()
+      var found = null
+      for (var i = 0; i < list.length && !found; i++) {
+        var o = ipcOf(list[i])
+        if (!o || !o.at || !o.size) continue
+        var a = Model.cleanAddress(list[i].address)
+        var cls = String(o.class || "").toLowerCase(), title = String(o.title || "").toLowerCase()
+        if ((lower.indexOf("class:") === 0 && cls.indexOf(lower.slice(6)) >= 0)
+            || (lower.indexOf("title:") === 0 && title.indexOf(lower.slice(6)) >= 0)
+            || (Model.cleanAddress(lower) && a === Model.cleanAddress(lower)))
+          found = { t: list[i], o: o, a: a }
+      }
+      if (!found) return "no-window"
+      var screenName = fallbackScreen()
+      for (var j = 0; j < mons.length; j++) if (mons[j].id === found.o.monitor) screenName = mons[j].name
+      pick = { kind: "window", address: found.a, appId: Model.cleanText(found.o.class, 80), title: Model.cleanText(found.o.title, 120),
+        screen: screenName, windowRect: { x: found.o.at[0], y: found.o.at[1], w: found.o.size[0], h: found.o.size[1] } }
+    }
+    var area = pick.kind === "window" ? pick.windowRect : pick.monitorRect
+    var parts = String(rectText || "").split(",").map(Number)
+    var r = parts.length === 4 && parts.every(function(n) { return isFinite(n) }) && parts[2] > 8 && parts[3] > 8
+      ? { x: area.x + parts[0], y: area.y + parts[1], w: parts[2], h: parts[3] }
+      : { x: area.x, y: area.y, w: area.w, h: area.h }
+    pick.rect = r
+    var m = monitorRect(pick.screen) || { x: 0, y: 0 }
+    pick.localRect = { x: r.x - m.x, y: r.y - m.y, w: r.w, h: r.h }
+    var before = pips.length
+    createFromPick(pick)
+    return pips.length > before ? pips[pips.length - 1].id : "failed"
+  }
+
   function takeSpawnRect(id, screenName) {
     var r = spawnRects[id]
     if (!r) return null
@@ -555,9 +605,27 @@ Item {
     function dockAll(): void { var ids = root.floating.map(function(p) { return p.id }); for (var i = 0; i < ids.length; i++) root.dock(ids[i]) }
     function showAll(): void { var ids = root.docked.map(function(p) { return p.id }); for (var i = 0; i < ids.length; i++) root.undock(ids[i]) }
     function closeAll(): void { root.closeAll() }
+    function add(target: string, rect: string): string { return root.addFromSpec(target, rect) }
+    function dock(id: string): void { root.dock(id) }
+    function undock(id: string): void { root.undock(id) }
+    function close(id: string): void { root.closePip(id) }
+    function sticky(id: string): void { root.toggleSticky(id, root.activeWorkspaceIds()[0] || 0) }
+    // Move and size a floating PiP: x and y on its screen, width in pixels.
+    function place(id: string, x: string, y: string, width: string): string {
+      var p = root.pipById(id)
+      if (!p) return "unknown"
+      var patch = {}
+      if (x !== "") patch.x = Number(x)
+      if (y !== "") patch.y = Number(y)
+      if (width !== "") patch.width = Math.max(Model.MIN_WIDTH, Number(width))
+      root.updatePip(id, patch)
+      return "ok"
+    }
     function list(): string {
       return JSON.stringify(root.pips.map(function(p) {
-        return { id: p.id, kind: p.kind, label: Model.pipLabel(p), docked: p.docked, sticky: p.sticky, workspace: p.workspace }
+        return { id: p.id, kind: p.kind, label: Model.pipLabel(p), docked: p.docked, sticky: p.sticky, workspace: p.workspace,
+          screen: p.screen, x: Math.round(p.x), y: Math.round(p.y), width: Math.round(p.width), height: Math.round(p.width / p.aspect),
+          view: (function(v) { return v && v.visible ? { x: Math.round(v.x), y: Math.round(v.y), w: Math.round(v.width), h: Math.round(v.height) } : null })(root.viewFor(p.id)) }
       }))
     }
     function settings(): string { return JSON.stringify(root.settings) }
@@ -565,6 +633,7 @@ Item {
     function debug(): string {
       return JSON.stringify({
         bars: root.dockWidgets.map(function(w) { return w.iconRect() }),
+        thumbs: root.docked.map(function(p) { var w = root.dockWidgetFor(p.screen); return { id: p.id, rect: w ? w.thumbRect(p.id) : null } }),
         heartbeat: root.heartbeat,
         peek: { screen: root.peekScreen, pip: root.peekPip ? root.peekPip.id : "", rect: root.peekRect },
         layers: layers.instances.map(function(l) { return { screen: l.screenName, workspace: l.workspaceId, pips: l.pips.length, peeking: l.peeking, visible: l.visible } })

@@ -156,10 +156,16 @@ Panel {
             id: thumbSource
             anchors.fill: parent
             visible: false
+            clip: true
             layer.enabled: true
             Rectangle { anchors.fill: parent; color: Commons.Color.background }
+            // Cover the thumbnail keeping the crop's shape: a thin strip
+            // shows its middle at full height instead of a squashed sliver.
             LiveSource {
-              anchors.fill: parent
+              readonly property real shape: thumb.pip ? thumb.pip.aspect : 1.6
+              anchors.centerIn: parent
+              width: Math.max(parent.width, parent.height * shape)
+              height: width / shape
               captureSource: root.service && thumb.pip ? root.service.captureSourceFor(thumb.pip) : null
               crop: thumb.pip ? thumb.pip.crop : ({ x: 0, y: 0, w: 1, h: 1 })
               refresh: root.cfg.refresh
@@ -192,7 +198,8 @@ Panel {
           onContainsMouseChanged: {
             if (!root.service) return
             if (containsMouse) root.service.startPeek(thumb.pipId, root.globalRect(thumb))
-            else root.service.endPeek(false)
+            // Leaving for the next thumbnail must not close the peek it opened.
+            else if (root.service.peekPip && root.service.peekPip.id === thumb.pipId) root.service.endPeek(false)
           }
           onClicked: function(m) {
             if (!root.service) return
@@ -433,12 +440,20 @@ Panel {
                   Layout.preferredWidth: Math.min(Style.space(72), Style.space(40) * (pipRow.pip ? pipRow.pip.aspect : 1.6))
                   Rectangle { anchors.fill: parent; anchors.margins: -1; radius: 5; color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.3) }
                   Rectangle { anchors.fill: parent; radius: 4; color: Commons.Color.background }
-                  LiveSource {
+                  // Cover the box keeping the crop's shape (see the bar thumbnails).
+                  Item {
                     anchors.fill: parent
-                    captureSource: root.service && pipRow.pip ? root.service.captureSourceFor(pipRow.pip) : null
-                    crop: pipRow.pip ? pipRow.pip.crop : ({ x: 0, y: 0, w: 1, h: 1 })
-                    refresh: "1"
-                    active: root.opened
+                    clip: true
+                    LiveSource {
+                      readonly property real shape: pipRow.pip ? pipRow.pip.aspect : 1.6
+                      anchors.centerIn: parent
+                      width: Math.max(parent.width, parent.height * shape)
+                      height: width / shape
+                      captureSource: root.service && pipRow.pip ? root.service.captureSourceFor(pipRow.pip) : null
+                      crop: pipRow.pip ? pipRow.pip.crop : ({ x: 0, y: 0, w: 1, h: 1 })
+                      refresh: "1"
+                      active: root.opened
+                    }
                   }
                 }
 

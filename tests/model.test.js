@@ -61,6 +61,13 @@ test("the aspect ratio follows the cropped pixels", () => {
   near(M.cropAspect({ x: 0, y: 0, w: 0.5, h: 1 }, 1920, 1080), 8 / 9)
 })
 
+test("a thin strip keeps its true shape", () => {
+  // htop's CPU meters: a strip far wider than 10:1 must not be squashed.
+  const pip = M.normalizePip({ id: "a", kind: "window", address: "ab", aspect: 13.05, width: 700, x: 0, y: 0 })
+  near(pip.aspect, 13.05)
+  near(M.cropAspect({ x: 0.026, y: 0.034, w: 0.957, h: 0.1176 }, 845, 527), 0.957 * 845 / (0.1176 * 527))
+})
+
 test("a region inside one window follows that window", () => {
   const wins = [{ address: "a", x: 0, y: 0, w: 500, h: 500 }, { address: "b", x: 400, y: 0, w: 500, h: 500 }]
   assert.equal(M.attachRegion({ x: 10, y: 10, w: 100, h: 100 }, wins).address, "a")

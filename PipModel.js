@@ -180,7 +180,7 @@ function cropFromRect(rect, area) {
 function cropAspect(crop, sourceW, sourceH) {
   var w = Math.max(1, num(sourceW, 16)) * crop.w
   var h = Math.max(1, num(sourceH, 9)) * crop.h
-  return clamp(w / h, 0.1, 10)
+  return clamp(w / h, 0.02, 50)
 }
 
 // Where the whole source must sit, and how large, so that the crop fills a
@@ -313,7 +313,7 @@ function normalizePip(raw) {
     x: Math.round(num(raw.x, 0)),
     y: Math.round(num(raw.y, 0)),
     width: Math.round(clamp(num(raw.width, 320), MIN_WIDTH, MAX_WIDTH)),
-    aspect: clamp(num(raw.aspect, 16 / 9), 0.1, 10),
+    aspect: clamp(num(raw.aspect, 16 / 9), 0.02, 50),
     opacity: clamp(num(raw.opacity, 1), RANGES.opacity[0], 1),
     sticky: raw.sticky !== false,
     workspace: ws,

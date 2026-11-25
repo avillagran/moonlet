@@ -4,6 +4,38 @@ Live picture-in-picture for anything on your Omarchy desktop: a whole window, a 
 
 ![OmaPiP](preview.png)
 
+## See it
+
+**Pick anything.** Right-click the bar icon, then drag over just the part you want (here, htop's CPU meters) or click a whole window.
+
+![Dragging a region over htop's CPU meters](docs/screenshots/pick-region.jpg)
+
+![Picking a whole window with one click](docs/screenshots/pick-window.jpg)
+
+**It follows you.** Switch workspace and your PiPs come along, still live: a terminal, a YouTube video, an animation.
+
+![Three live PiPs on an empty workspace](docs/screenshots/desktop.jpg)
+
+**Hover to grow.** The PiP grows toward the middle of the screen and its buttons pop in, with a tooltip for each.
+
+![A hovered PiP with its buttons](docs/screenshots/hover.jpg)
+
+**Resize from any edge, crop with a right-drag.**
+
+| Resize | Crop |
+| --- | --- |
+| ![Resize handles on a PiP's edges](docs/screenshots/resize.jpg) | ![Cropping a PiP with a right-drag](docs/screenshots/crop.jpg) |
+
+**Minimize to the bar.** Docked PiPs become live thumbnails beside the icon; hover one for a large live peek.
+
+![Peeking at a docked PiP from the bar](docs/screenshots/peek.jpg)
+
+**Everything in one panel.** Every PiP with its live preview, and all the settings.
+
+| Panel | Settings |
+| --- | --- |
+| ![The OmaPiP panel](docs/screenshots/panel.jpg) | ![The settings list](docs/screenshots/settings.jpg) |
+
 ## What it does
 
 - **Any window, even when you leave it.** Click a window and its PiP keeps updating live when you switch to another workspace, when the window is hidden behind others, or when it sits on another monitor.
@@ -44,6 +76,8 @@ OmaPiP answers on the shell's IPC, so any key can drive it. For example, in `~/.
 ```lua
 o.bind("SUPER + ALT + P", "New PiP", "omarchy-shell omapip pick")
 o.bind("SUPER + ALT + O", "Dock or show PiPs", "omarchy-shell omapip toggle")
+-- A fixed PiP: the top of the window titled "htop"
+o.bind("SUPER + ALT + H", "htop PiP", "omarchy-shell omapip add title:htop 0,0,840,80")
 ```
 
 | Command | What it does |
@@ -51,7 +85,10 @@ o.bind("SUPER + ALT + O", "Dock or show PiPs", "omarchy-shell omapip toggle")
 | `omarchy-shell omapip pick` | Open the picker |
 | `omarchy-shell omapip toggle` | Dock every PiP, or show them all |
 | `omarchy-shell omapip dockAll` / `showAll` / `closeAll` | What they say |
-| `omarchy-shell omapip list` | The PiPs, as JSON |
+| `omarchy-shell omapip add <target> [x,y,w,h]` | A PiP without the picker. Target: `screen`, `screen:NAME`, a window address, `class:TEXT` or `title:TEXT`. The rectangle is inside the window or screen, in logical pixels; leave it out for all of it. Prints the new PiP's id |
+| `omarchy-shell omapip dock <id>` / `undock <id>` / `close <id>` / `sticky <id>` | Act on one PiP |
+| `omarchy-shell omapip place <id> <x> <y> <width>` | Move and size a PiP (empty values keep the current one) |
+| `omarchy-shell omapip list` | The PiPs, with their positions, as JSON |
 | `omarchy-shell omapip settings` | The settings, as JSON |
 | `omarchy-shell omapip set <key> <value>` | Change a setting |
 
