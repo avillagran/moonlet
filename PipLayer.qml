@@ -41,6 +41,25 @@ PanelWindow {
 
   property alias stage: stage
 
+  // See Service.heartbeat: an invisible pixel that changes, so Hyprland keeps
+  // redrawing this monitor and delivering frames of hidden windows.
+  property bool beat: false
+  Rectangle {
+    parent: root.contentItem
+    x: 0; y: 0; width: 1; height: 1
+    color: Qt.rgba(0, 0, 0, root.beat ? 0.004 : 0.008)
+  }
+  FrameAnimation {
+    running: root.visible && !!root.service && root.service.heartbeat === "live"
+    onTriggered: root.beat = !root.beat
+  }
+  Timer {
+    running: root.visible && !!root.service && root.service.heartbeat === "slow"
+    interval: 100
+    repeat: true
+    onTriggered: root.beat = !root.beat
+  }
+
   visible: pips.length > 0 || peeking
   color: "transparent"
   anchors { top: true; left: true; right: true; bottom: true }

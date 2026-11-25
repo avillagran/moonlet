@@ -65,6 +65,26 @@ Item {
   readonly property var floating: pips.filter(function(p) { return !p.docked })
   readonly property var docked: pips.filter(function(p) { return p.docked })
 
+  // Hyprland hands over a window's next frame only when it redraws a
+  // monitor, and a window on a hidden workspace never makes it redraw. A
+  // still screen would freeze such a PiP (a video plays on, its PiP stops)
+  // until something else moved. While one is shown, the layers keep the
+  // monitor redrawing: "live" every frame, slower rates on a timer.
+  readonly property string heartbeat: {
+    var rev = windowRevision
+    var mode = ""
+    for (var i = 0; i < pips.length; i++) {
+      var p = pips[i]
+      if (p.kind !== "window" || !toplevelMap[p.address]) continue
+      if (p.docked && !settings.thumbs && !(peekPip && peekPip.id === p.id)) continue
+      if (sourceVisible(p)) continue
+      var r = p.refresh || settings.refresh
+      if (r === "live") return "live"
+      mode = "slow"
+    }
+    return mode
+  }
+
   function pipById(id) { return Model.findPip(pips, id) }
 
   function fallbackScreen() {
@@ -545,6 +565,7 @@ Item {
     function debug(): string {
       return JSON.stringify({
         bars: root.dockWidgets.map(function(w) { return w.iconRect() }),
+        heartbeat: root.heartbeat,
         peek: { screen: root.peekScreen, pip: root.peekPip ? root.peekPip.id : "", rect: root.peekRect },
         layers: layers.instances.map(function(l) { return { screen: l.screenName, workspace: l.workspaceId, pips: l.pips.length, peeking: l.peeking, visible: l.visible } })
       })
