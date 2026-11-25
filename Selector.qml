@@ -259,9 +259,62 @@ Item {
         }
       }
 
-      // Crosshair while dragging.
-      Rectangle { visible: root.dragging; x: root.dragX; y: 0; width: 1; height: stage.height; color: Qt.rgba(Commons.Color.accent.r, Commons.Color.accent.g, Commons.Color.accent.b, 0.45) }
-      Rectangle { visible: root.dragging; x: 0; y: root.dragY; width: stage.width; height: 1; color: Qt.rgba(Commons.Color.accent.r, Commons.Color.accent.g, Commons.Color.accent.b, 0.45) }
+      // Guides through the pointer, brighter while dragging a region.
+      readonly property real px: root.dragging ? root.dragX : pointer.mouseX
+      readonly property real py: root.dragging ? root.dragY : pointer.mouseY
+      readonly property real guide: !pointer.containsMouse && !root.dragging ? 0 : (root.dragging ? 0.55 : 0.22)
+      Rectangle { x: Math.round(stage.px); y: 0; width: 1; height: stage.height; opacity: stage.guide; color: Commons.Color.accent; Behavior on opacity { NumberAnimation { duration: root.dur(140) } } }
+      Rectangle { x: 0; y: Math.round(stage.py); width: stage.width; height: 1; opacity: stage.guide; color: Commons.Color.accent; Behavior on opacity { NumberAnimation { duration: root.dur(140) } } }
+
+      // What a click or a drag takes right now, beside the pointer.
+      Rectangle {
+        id: tag
+        readonly property string mode: root.dragging ? "region" : (root.hovered ? "window" : "screen")
+        readonly property bool flipX: stage.px + width + 28 > stage.width
+        readonly property bool flipY: stage.py + height + 28 > stage.height
+        x: flipX ? stage.px - width - 16 : stage.px + 18
+        y: flipY ? stage.py - height - 16 : stage.py + 20
+        width: tagRow.implicitWidth + Style.space(16)
+        height: tagRow.implicitHeight + Style.space(8)
+        radius: height / 2
+        color: Qt.rgba(Commons.Color.background.r, Commons.Color.background.g, Commons.Color.background.b, 0.94)
+        border.width: 1
+        border.color: Commons.Color.accent
+        opacity: pointer.containsMouse && !root.confirming && overlay.contentRevealed ? 1 : 0
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: root.dur(140) } }
+        Behavior on width { NumberAnimation { duration: root.dur(160); easing.type: Easing.OutCubic } }
+        // A pop each time what it takes changes.
+        onModeChanged: if (root.motion.flair > 0) tagPop.restart()
+        SequentialAnimation {
+          id: tagPop
+          NumberAnimation { target: tag; property: "scale"; to: 1.18; duration: root.dur(80); easing.type: Easing.OutCubic }
+          NumberAnimation { target: tag; property: "scale"; to: 1; duration: root.dur(200); easing.type: Easing.OutBack }
+        }
+        Row {
+          id: tagRow
+          anchors.centerIn: parent
+          spacing: Style.space(6)
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            textFormat: Text.PlainText
+            text: tag.mode === "region" ? Model.GLYPHS.region : (tag.mode === "window" ? Model.GLYPHS.window : Model.GLYPHS.monitor)
+            color: Commons.Color.accent
+            font.family: Style.font.family
+            font.pixelSize: Style.font.icon
+          }
+          Text {
+            anchors.verticalCenter: parent.verticalCenter
+            textFormat: Text.PlainText
+            color: Commons.Color.foreground
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            text: tag.mode === "region" ? root.t("picker.tagRegion", "Region")
+              : tag.mode === "window" ? root.t("picker.tagWindow", "Window · drag for a region")
+              : root.t("picker.tagScreen", "Whole screen · drag for a region")
+          }
+        }
+      }
 
       // How to use it, dropping in from the top.
       Rectangle {
@@ -327,7 +380,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: root.dragging ? Qt.CrossCursor : Qt.PointingHandCursor
+        cursorShape: Qt.CrossCursor
         enabled: !root.confirming
         onPositionChanged: function(mouse) {
           if (pressed && (mouse.buttons & Qt.LeftButton)) {

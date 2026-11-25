@@ -119,5 +119,8 @@
   "help.leftClick": "Qué hace el clic en el ícono de la barra.",
   "help.middleClick": "Qué hace el clic central en el ícono de la barra.",
   "help.rightClick": "Qué hace el clic derecho en el ícono de la barra.",
-  "pip.crop": "Recorte"
+  "pip.crop": "Recorte",
+  "picker.tagRegion": "Región",
+  "picker.tagWindow": "Ventana · arrastra para una región",
+  "picker.tagScreen": "Pantalla completa · arrastra para una región"
 }
