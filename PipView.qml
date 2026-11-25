@@ -71,9 +71,27 @@ Item {
   readonly property bool interactive: wanted && shown > 0.5 && !flying && !closing
 
   // ------------------------------------------------------------- hover
-  readonly property bool hovered: mouse.containsMouse || dragging || resizing || chromeHover || handleHover
+  // The pointer anywhere on the PiP, its buttons, its edges or the halo.
+  readonly property bool pointerIn: mouse.containsMouse || chromeHover || handleHover || haloHover
+  // A short grace after the pointer leaves, so a twitch past the edge does
+  // not shrink the PiP under it.
+  readonly property bool hovered: pointerIn || leaveGrace.running || dragging || resizing
   property bool chromeHover: false
   property bool handleHover: false
+  property bool haloHover: false
+  onPointerInChanged: if (!pointerIn) leaveGrace.restart(); else leaveGrace.stop()
+  Timer { id: leaveGrace; interval: 260 }
+
+  // While hovered, an invisible band around the PiP keeps it hovered: going
+  // for an edge and overshooting a little must not shrink it right away.
+  // A click in the band is lost to the window below, so it lets go then.
+  property bool haloDropped: false
+  readonly property real haloPad: interactive && hovered && !haloDropped && settings.hover !== "dodge" && settings.hover !== "ghost"
+    ? Math.round(Style.space(28)) : 0
+  Connections {
+    target: mouse
+    function onContainsMouseChanged() { if (mouse.containsMouse) root.haloDropped = false }
+  }
   // After a resize the PiP keeps the size it was given until the pointer
   // leaves, instead of growing past it again.
   property bool sizedThisHover: false
@@ -270,7 +288,7 @@ Item {
 
     // --------------------------------------------------------- resizing
     // Edges and corners resize keeping the shape, the opposite side still.
-    // Ctrl+drag an edge to crop instead: show more or less of the source.
+    // Right-drag an edge to crop instead: show more or less of the source.
     Item {
       id: handles
       anchors.fill: parent
@@ -554,6 +572,19 @@ Item {
   }
 
   // ------------------------------------------------------------- input
+  MouseArea {
+    id: halo
+    anchors.fill: parent
+    anchors.margins: -root.haloPad
+    z: -2
+    enabled: root.haloPad > 0
+    hoverEnabled: true
+    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+    onContainsMouseChanged: root.haloHover = containsMouse
+    onEnabledChanged: if (!enabled) root.haloHover = false
+    onPressed: { root.haloDropped = true; root.haloHover = false; leaveGrace.stop() }
+  }
+
   MouseArea {
     id: mouse
     anchors.fill: parent

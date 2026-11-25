@@ -82,10 +82,12 @@ PanelWindow {
       readonly property bool on: !!view && view.interactive
       // Bound to the numbers rather than `item`, so the input area follows a
       // PiP as it grows under the pointer.
-      x: on ? Math.floor(view.x) : 0
-      y: on ? Math.floor(view.y) : 0
-      width: on ? Math.ceil(view.width) + 1 : 0
-      height: on ? Math.ceil(view.height) + 1 : 0
+      // Plus the halo that keeps a hovered PiP from shrinking at its edge.
+      readonly property real pad: on ? view.haloPad : 0
+      x: on ? Math.floor(view.x - pad) : 0
+      y: on ? Math.floor(view.y - pad) : 0
+      width: on ? Math.ceil(view.width + 2 * pad) + 1 : 0
+      height: on ? Math.ceil(view.height + 2 * pad) + 1 : 0
     }
   }
 
