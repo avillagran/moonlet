@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import Quickshell
 import qs.Commons
 import qs.Commons as Commons
 import "PipModel.js" as Model
@@ -302,30 +303,29 @@ Item {
         layoutDirection: Qt.RightToLeft
 
         Repeater {
-          model: {
-            var list = [
-              { key: "close", glyph: Model.GLYPHS.close, tip: root.t("pip.close", "Close") },
-              { key: "dock", glyph: Model.GLYPHS.dock, tip: root.t("pip.dock", "Dock in the bar") },
-              { key: "sticky", glyph: root.pip && root.pip.sticky ? Model.GLYPHS.pin : Model.GLYPHS.pinOff,
-                tip: root.pip && root.pip.sticky ? root.t("pip.allWorkspaces", "On every workspace") : root.t("pip.oneWorkspace", "Only on this workspace") },
-              { key: "opacity", glyph: Model.GLYPHS.opacity, tip: root.t("pip.opacity", "Opacity") },
-              { key: "through", glyph: Model.GLYPHS.clickThrough, tip: root.t("pip.clickThrough", "Click through") },
-              { key: "focus", glyph: Model.GLYPHS.focus, tip: root.t("pip.focus", "Go to source") }
-            ]
-            if (root.pip && root.pip.kind !== "window") list.pop()
-            var room = Math.max(1, Math.floor((root.width - Style.space(10)) / (Style.space(26) + Style.space(3))))
-            return list.slice(0, room)
+          // Only the keys: rebuilding on every PiP change would recreate the
+          // buttons under the pointer.
+          model: ScriptModel {
+            values: {
+              var keys = ["close", "dock", "sticky", "opacity", "through", "focus"]
+              if (root.pip && root.pip.kind !== "window") keys.pop()
+              var room = Math.max(1, Math.floor((root.gw - Style.space(10)) / (Style.space(26) + Style.space(3))))
+              return keys.slice(0, room)
+            }
           }
 
           Rectangle {
             id: btn
-            required property var modelData
+            required property string modelData
             required property int index
+            readonly property string glyph: root.glyphFor(modelData)
+            readonly property string tip: root.tipFor(modelData)
+            onTipChanged: if (btnMouse.containsMouse) chrome.tipText = tip
             width: Style.space(26)
             height: width
             radius: width / 2
             color: btnMouse.containsMouse
-              ? (modelData.key === "close" ? Commons.Color.urgent : Commons.Color.accent)
+              ? (modelData === "close" ? Commons.Color.urgent : Commons.Color.accent)
               : Qt.rgba(0, 0, 0, 0.5)
             Behavior on color { ColorAnimation { duration: root.dur(120) } }
             // Pop in one after another.
@@ -339,7 +339,7 @@ Item {
             Text {
               anchors.centerIn: parent
               textFormat: Text.PlainText
-              text: btn.modelData.glyph
+              text: btn.glyph
               color: "white"
               font.family: Style.font.family
               font.pixelSize: Style.font.icon
@@ -349,10 +349,57 @@ Item {
               anchors.fill: parent
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
-              onContainsMouseChanged: root.chromeHover = containsMouse
-              onClicked: root.action(btn.modelData.key)
+              onContainsMouseChanged: {
+                root.chromeHover = containsMouse
+                if (containsMouse) {
+                  chrome.tipText = btn.tip
+                  chrome.tipCenterX = btn.mapToItem(chrome, btn.width / 2, 0).x
+                  tipDelay.restart()
+                } else {
+                  tipDelay.stop()
+                  chrome.tipShown = false
+                }
+              }
+              onClicked: root.action(btn.modelData)
             }
           }
+        }
+      }
+
+      // Tooltip for the buttons: drops in under the hovered one.
+      property string tipText: ""
+      property real tipCenterX: 0
+      property bool tipShown: false
+      Timer { id: tipDelay; interval: 280; onTriggered: chrome.tipShown = true }
+      onShowChanged: if (!show) { tipDelay.stop(); tipShown = false }
+
+      Rectangle {
+        id: tip
+        readonly property bool on: chrome.tipShown && chrome.show
+        z: 5
+        width: tipLabel.implicitWidth + Style.space(16)
+        height: tipLabel.implicitHeight + Style.space(8)
+        radius: height / 2
+        x: Math.max(Style.space(4), Math.min(chrome.width - width - Style.space(4), chrome.tipCenterX - width / 2))
+        y: buttons.y + buttons.height + Style.space(6) + (on ? 0 : -Style.space(6))
+        color: Qt.rgba(Commons.Color.background.r, Commons.Color.background.g, Commons.Color.background.b, 0.94)
+        border.width: 1
+        border.color: Qt.rgba(Commons.Color.accent.r, Commons.Color.accent.g, Commons.Color.accent.b, 0.7)
+        opacity: on ? 1 : 0
+        scale: on ? 1 : 0.9
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: root.dur(on ? 160 : 100) } }
+        Behavior on y { NumberAnimation { duration: root.dur(180); easing.type: root.springType; easing.overshoot: root.overshoot } }
+        Behavior on scale { NumberAnimation { duration: root.dur(180); easing.type: root.springType; easing.overshoot: root.overshoot } }
+        Behavior on x { enabled: tip.on; NumberAnimation { duration: root.dur(140); easing.type: Easing.OutCubic } }
+        Text {
+          id: tipLabel
+          anchors.centerIn: parent
+          textFormat: Text.PlainText
+          text: chrome.tipText
+          color: Commons.Color.foreground
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
         }
       }
 
@@ -502,6 +549,25 @@ Item {
     var margin = Style.gapsOut * 2 + 4
     var nx = anchorRight ? margin : layerW - gw - margin
     service.updatePip(pipId, { x: Math.round(nx) })
+  }
+
+  function glyphFor(key) {
+    var sticky = pip && pip.sticky
+    return key === "close" ? Model.GLYPHS.close
+      : key === "dock" ? Model.GLYPHS.dock
+      : key === "sticky" ? (sticky ? Model.GLYPHS.pin : Model.GLYPHS.pinOff)
+      : key === "opacity" ? Model.GLYPHS.opacity
+      : key === "through" ? Model.GLYPHS.clickThrough
+      : Model.GLYPHS.focus
+  }
+
+  function tipFor(key) {
+    if (key === "close") return t("pip.close", "Close")
+    if (key === "dock") return t("pip.dock", "Dock in the bar")
+    if (key === "sticky") return pip && pip.sticky ? t("pip.allWorkspaces", "Every workspace") : t("pip.oneWorkspace", "Only this workspace")
+    if (key === "opacity") return t("pip.opacity", "Opacity") + " · " + Math.round((pip ? pip.opacity : 1) * 100) + "%"
+    if (key === "through") return t("pip.clickThrough", "Click through")
+    return t("pip.focus", "Go to source")
   }
 
   function action(key) {

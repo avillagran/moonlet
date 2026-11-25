@@ -207,6 +207,9 @@ Panel {
   // ------------------------------------------------------------ panel
   property int cursor: 0
   property bool cursorActive: false
+  // The cursor moved with the keyboard rather than the mouse: show the
+  // hovered setting's help for it too.
+  property bool cursorFromKeys: false
 
   readonly property var settingRows: [
     { key: "visibility", label: strings.t("settings.visibility") },
@@ -292,6 +295,7 @@ Panel {
       id: keyCatcher
       anchors.fill: parent
       onMoveRequested: function(dx, dy) {
+        root.cursorFromKeys = true
         if (!root.cursorActive) { root.cursorActive = true; return }
         root.cursor = Math.max(0, Math.min(root.rows.length - 1, root.cursor + dy))
       }
@@ -558,11 +562,17 @@ Panel {
                 transform: Translate { y: (1 - settingRow.enter) * -Style.space(8) }
 
                 MouseArea {
+                  id: settingMouse
                   anchors.fill: parent
                   hoverEnabled: true
                   cursorShape: Qt.PointingHandCursor
-                  onEntered: { root.cursorActive = true; root.cursor = root.rowIndex("setting", settingRow.modelData.key) }
+                  onEntered: { root.cursorActive = true; root.cursorFromKeys = false; root.cursor = root.rowIndex("setting", settingRow.modelData.key) }
                   onClicked: root.activate({ type: "setting", key: settingRow.modelData.key })
+                }
+                PanelToolTip {
+                  visible: settingMouse.containsMouse || (settingRow.hasCursor && root.cursorFromKeys)
+                  text: strings.t("help." + settingRow.modelData.key)
+                  width: Math.min(implicitWidth, Style.space(300))
                 }
                 RowLayout {
                   anchors.fill: parent
@@ -612,9 +622,16 @@ Panel {
                 { key: "radius", min: -1, max: 40, step: 1, fmt: function(v) { return v < 0 ? strings.t("value.auto") : Math.round(v) + " px" } }
               ] : []
               Item {
+                id: sliderRow
                 required property var modelData
                 width: settingsColumn.width
                 height: Style.space(46)
+                HoverHandler { id: sliderHover }
+                PanelToolTip {
+                  visible: sliderHover.hovered
+                  text: strings.t("help." + sliderRow.modelData.key)
+                  width: Math.min(implicitWidth, Style.space(300))
+                }
                 Text {
                   x: Style.space(10)
                   y: Style.space(2)

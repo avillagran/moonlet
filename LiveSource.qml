@@ -38,6 +38,17 @@ Item {
     onStopped: root.sourceStopped()
   }
 
+  // In live mode Quickshell asks for the next frame only while painting the
+  // last one. If a paint is skipped, the chain stops and the picture freezes
+  // (a video keeps playing, its PiP doesn't) until something else repaints.
+  // Ask again now and then: a no-op while a frame is already on its way.
+  Timer {
+    running: root.capturing && root.refresh === "live" && view.hasContent
+    repeat: true
+    interval: 200
+    onTriggered: view.captureFrame()
+  }
+
   Timer {
     running: root.capturing && root.refresh !== "live"
     repeat: true

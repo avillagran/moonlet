@@ -450,7 +450,7 @@ Item {
   }
   Timer {
     id: peekClose
-    interval: 240
+    interval: 350
     onTriggered: if (!root.peekHovered) { root.peekPip = null; root.peekRect = null; root.peekScreen = "" }
   }
   onPipsChanged: if (peekPip) peekPip = pipById(peekPip.id)

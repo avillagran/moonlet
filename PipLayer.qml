@@ -51,7 +51,7 @@ PanelWindow {
 
   // Input only where a PiP or the peek is.
   mask: Region {
-    regions: maskRegions.instances.concat(peekRegion.item ? [peekRegion.item] : [])
+    regions: maskRegions.instances.concat(peekRegion.item ? [peekRegion.item, bridgeRegion.item] : [])
   }
 
   Variants {
@@ -60,14 +60,28 @@ PanelWindow {
     Region {
       required property var modelData
       readonly property var view: root.viewFor(modelData, root.viewsRevision)
-      item: view && view.interactive ? view : null
+      readonly property bool on: !!view && view.interactive
+      // Bound to the numbers rather than `item`, so the input area follows a
+      // PiP as it grows under the pointer.
+      x: on ? Math.floor(view.x) : 0
+      y: on ? Math.floor(view.y) : 0
+      width: on ? Math.ceil(view.width) + 1 : 0
+      height: on ? Math.ceil(view.height) + 1 : 0
     }
   }
 
+  // The peek takes the pointer only once it has grown away from the
+  // thumbnail: while it grows out of it, it would cover the thumbnail, steal
+  // the pointer, then slide away and leave it nowhere, closing itself.
   LazyLoader {
     id: peekRegion
-    active: root.peeking
-    Region { item: peek }
+    active: root.peeking && peek.settled
+    Region { x: Math.floor(peek.x); y: Math.floor(peek.y); width: Math.ceil(peek.width) + 1; height: Math.ceil(peek.height) + 1 }
+  }
+  LazyLoader {
+    id: bridgeRegion
+    active: root.peeking && peek.settled
+    Region { x: Math.floor(bridge.x); y: Math.floor(bridge.y); width: Math.ceil(bridge.width); height: Math.ceil(bridge.height) }
   }
 
   property int viewsRevision: 0
@@ -112,6 +126,7 @@ PanelWindow {
       readonly property bool open: root.peeking && !!pip && !!from
 
       property real amount: open ? 1 : 0
+      readonly property bool settled: open && amount > 0.97
       Behavior on amount { NumberAnimation { duration: root.dur(peek.open ? 260 : 150); easing.type: peek.open ? (root.motion.springy ? Easing.OutBack : Easing.OutCubic) : Easing.InCubic; easing.overshoot: 0.9 } }
       visible: amount > 0.01
 
@@ -196,12 +211,33 @@ PanelWindow {
       }
 
       MouseArea {
+        id: peekMouse
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onContainsMouseChanged: if (root.service) root.service.peekHover(containsMouse)
         onClicked: if (root.service && peek.pip) root.service.undock(peek.pip.id)
       }
     }
+
+    // An invisible strip from the thumbnail to the peek, so moving the
+    // pointer down onto the preview never crosses a gap that closes it.
+    Item {
+      id: bridge
+      readonly property real topY: peek.isBelow ? peek.fy + peek.fh - 2 : peek.ty + peek.targetH
+      readonly property real bottomY: peek.isBelow ? peek.ty + 2 : peek.fy + 2
+      x: peek.fx - 8
+      width: peek.fw + 16
+      y: topY
+      height: Math.max(0, bottomY - topY)
+      visible: peek.settled
+      MouseArea {
+        id: bridgeMouse
+        anchors.fill: parent
+        hoverEnabled: true
+      }
+    }
+
+    readonly property bool peekHovered: peekMouse.containsMouse || bridgeMouse.containsMouse
+    onPeekHoveredChanged: if (root.service) root.service.peekHover(peekHovered)
   }
 }
