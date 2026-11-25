@@ -24,6 +24,8 @@ Live picture-in-picture for anything on your Omarchy desktop: a whole window, a 
 | Picker | Drag | PiP of that region |
 | Picker | `S` / `Enter` / `Esc` | Whole screen / what is highlighted / cancel |
 | PiP | Drag | Move it; it snaps to edges and corners |
+| PiP | Drag an edge or corner | Resize, keeping its shape; the opposite side stays put |
+| PiP | `Ctrl`+drag an edge | Crop: show more or less of the source |
 | PiP | Wheel / `Ctrl`+wheel | Resize / change opacity |
 | PiP | Double click | Jump to the source window |
 | PiP | Right click / middle click | Dock it in the bar / close it |

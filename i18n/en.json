@@ -118,5 +118,6 @@
   "help.paintCursor": "Draw the mouse pointer inside the PiP.",
   "help.leftClick": "What clicking the bar icon does.",
   "help.middleClick": "What middle-clicking the bar icon does.",
-  "help.rightClick": "What right-clicking the bar icon does."
+  "help.rightClick": "What right-clicking the bar icon does.",
+  "pip.crop": "Crop"
 }

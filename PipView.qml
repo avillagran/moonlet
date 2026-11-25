@@ -20,7 +20,12 @@ Item {
   readonly property var settings: service ? service.settings : Model.normalizeSettings({})
   readonly property var motion: service ? service.motion : Model.motion("extreme")
   readonly property string pipId: pip ? pip.id : ""
-  readonly property real aspect: pip ? pip.aspect : 16 / 9
+  // While an edge is being dragged with Ctrl the crop and shape change live,
+  // before they are saved.
+  property var liveCrop: null
+  property real liveAspect: 0
+  readonly property real aspect: liveAspect > 0 ? liveAspect : (pip ? pip.aspect : 16 / 9)
+  readonly property var crop: liveCrop || (pip ? pip.crop : ({ x: 0, y: 0, w: 1, h: 1 }))
 
   function dur(ms) { return Style.duration(Math.round(ms * motion.speed)) }
   function t(key, fallback) { return strings ? strings.t(key) : fallback }
@@ -66,11 +71,17 @@ Item {
   readonly property bool interactive: wanted && shown > 0.5 && !flying && !closing
 
   // ------------------------------------------------------------- hover
-  readonly property bool hovered: mouse.containsMouse || dragging || resizing || chromeHover
+  readonly property bool hovered: mouse.containsMouse || dragging || resizing || chromeHover || handleHover
   property bool chromeHover: false
-  readonly property bool growing: settings.hover === "grow" && hovered && !dragging && !resizing
+  property bool handleHover: false
+  // After a resize the PiP keeps the size it was given until the pointer
+  // leaves, instead of growing past it again.
+  property bool sizedThisHover: false
+  property bool growSnap: false
+  onHoveredChanged: if (!hovered) sizedThisHover = false
+  readonly property bool growing: settings.hover === "grow" && hovered && !dragging && !resizing && !sizedThisHover
   property real grow: growing ? 1 : 0
-  Behavior on grow { NumberAnimation { duration: root.dur(root.growing ? 220 : 160); easing.type: root.growing ? root.springType : Easing.OutCubic; easing.overshoot: root.overshoot * 0.8 } }
+  Behavior on grow { enabled: !root.growSnap; NumberAnimation { duration: root.dur(root.growing ? 220 : 160); easing.type: root.growing ? root.springType : Easing.OutCubic; easing.overshoot: root.overshoot * 0.8 } }
   readonly property bool ghosted: settings.hover === "ghost" && mouse.containsMouse && !dragging && !resizing
 
   // Grow toward the middle of the screen, from the corner nearest an edge.
@@ -194,7 +205,7 @@ Item {
             id: live
             anchors.fill: parent
             captureSource: root.source
-            crop: root.pip ? root.pip.crop : ({ x: 0, y: 0, w: 1, h: 1 })
+            crop: root.crop
             refresh: root.pip && root.pip.refresh ? root.pip.refresh : root.settings.refresh
             paintCursor: root.settings.paintCursor
             active: root.visible
@@ -253,6 +264,113 @@ Item {
           maskSource: contentMask
           maskThresholdMin: 0.5
           maskSpreadAtMin: 1.0
+        }
+      }
+    }
+
+    // --------------------------------------------------------- resizing
+    // Edges and corners resize keeping the shape, the opposite side still.
+    // Ctrl+drag an edge to crop instead: show more or less of the source.
+    Item {
+      id: handles
+      anchors.fill: parent
+      readonly property real edge: Style.space(9)
+      readonly property real corner: Style.space(24)
+      readonly property bool show: root.hovered && root.interactive && !root.dragging
+
+      Repeater {
+        model: ["l", "r", "t", "b", "tl", "tr", "bl", "br"]
+        Item {
+          id: zone
+          required property string modelData
+          readonly property bool isCorner: modelData.length === 2
+          readonly property bool hasL: modelData.indexOf("l") >= 0
+          readonly property bool hasR: modelData.indexOf("r") >= 0
+          readonly property bool hasT: modelData.indexOf("t") >= 0
+          readonly property bool hasB: modelData.indexOf("b") >= 0
+          readonly property bool hot: zoneMouse.containsMouse || (root.resizing && root.resizeKey === modelData)
+          x: hasR ? handles.width - width : (hasL ? 0 : handles.corner)
+          y: hasB ? handles.height - height : (hasT ? 0 : handles.corner)
+          width: isCorner ? handles.corner : (hasL || hasR ? handles.edge : handles.width - 2 * handles.corner)
+          height: isCorner ? handles.corner : (hasT || hasB ? handles.edge : handles.height - 2 * handles.corner)
+
+          // The glow on the edge: a bar, or an L in a corner.
+          readonly property real glow: hot ? 1 : (handles.show ? 0.75 : 0)
+          readonly property real inset: root.borderWidth + 4
+          property real thick: hot ? 6 : 4
+          Behavior on thick { NumberAnimation { duration: root.dur(140); easing.type: root.springType } }
+          Rectangle {
+            visible: !zone.isCorner
+            color: root.cropMode && zone.hot ? Commons.Color.foreground : Commons.Color.accent
+            border.width: 1
+            border.color: Qt.rgba(0, 0, 0, 0.55)
+            radius: Math.min(width, height) / 2
+            opacity: zone.glow
+            Behavior on opacity { NumberAnimation { duration: root.dur(160) } }
+            property real len: (zone.hasL || zone.hasR ? zone.height : zone.width) * (zone.hot ? 0.7 : 0.3)
+            Behavior on len { NumberAnimation { duration: root.dur(220); easing.type: root.springType; easing.overshoot: root.overshoot } }
+            width: zone.hasL || zone.hasR ? zone.thick : len
+            height: zone.hasL || zone.hasR ? len : zone.thick
+            x: zone.hasL ? zone.inset : (zone.hasR ? zone.width - width - zone.inset : (zone.width - width) / 2)
+            y: zone.hasT ? zone.inset : (zone.hasB ? zone.height - height - zone.inset : (zone.height - height) / 2)
+          }
+          Item {
+            visible: zone.isCorner
+            anchors.fill: parent
+            opacity: zone.glow
+            Behavior on opacity { NumberAnimation { duration: root.dur(160) } }
+            scale: zone.hot ? 1.15 : 1
+            transformOrigin: zone.hasL ? (zone.hasT ? Item.TopLeft : Item.BottomLeft) : (zone.hasT ? Item.TopRight : Item.BottomRight)
+            Behavior on scale { NumberAnimation { duration: root.dur(180); easing.type: root.springType; easing.overshoot: root.overshoot * 1.5 } }
+            Rectangle { x: zone.hasL ? zone.inset : parent.width - width - zone.inset; y: zone.hasT ? zone.inset : parent.height - height - zone.inset; width: zone.thick; height: parent.height * 0.8; radius: width / 2; color: Commons.Color.accent; border.width: 1; border.color: Qt.rgba(0, 0, 0, 0.55) }
+            Rectangle { x: zone.hasL ? zone.inset : parent.width - width - zone.inset; y: zone.hasT ? zone.inset : parent.height - height - zone.inset; width: parent.width * 0.8; height: zone.thick; radius: height / 2; color: Commons.Color.accent; border.width: 1; border.color: Qt.rgba(0, 0, 0, 0.55) }
+          }
+
+          MouseArea {
+            id: zoneMouse
+            anchors.fill: parent
+            enabled: root.interactive
+            hoverEnabled: true
+            preventStealing: true
+            cursorShape: zone.isCorner
+              ? ((zone.hasT === zone.hasL) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
+              : (zone.hasL || zone.hasR ? Qt.SizeHorCursor : Qt.SizeVerCursor)
+            onContainsMouseChanged: root.handleHover = containsMouse
+            onPressed: function(m) {
+              var p = mapToItem(root.host ? root.host.stage : null, m.x, m.y)
+              root.beginResize(zone.modelData, p.x, p.y, !zone.isCorner && (m.modifiers & Qt.ControlModifier))
+            }
+            onPositionChanged: function(m) {
+              if (!pressed) return
+              var p = mapToItem(root.host ? root.host.stage : null, m.x, m.y)
+              root.updateResize(p.x, p.y)
+            }
+            onReleased: root.endResize()
+            onCanceled: root.endResize()
+          }
+        }
+      }
+
+      // The size while resizing.
+      Rectangle {
+        anchors.centerIn: parent
+        width: sizeLabel.implicitWidth + Style.space(18)
+        height: sizeLabel.implicitHeight + Style.space(8)
+        radius: height / 2
+        color: Qt.rgba(0, 0, 0, 0.62)
+        opacity: root.resizing ? 1 : 0
+        scale: root.resizing ? 1 : 0.85
+        visible: opacity > 0.01
+        Behavior on opacity { NumberAnimation { duration: root.dur(140) } }
+        Behavior on scale { NumberAnimation { duration: root.dur(180); easing.type: root.springType } }
+        Text {
+          id: sizeLabel
+          anchors.centerIn: parent
+          textFormat: Text.PlainText
+          color: "white"
+          font.family: Style.font.family
+          font.pixelSize: Style.font.bodySmall
+          text: (root.cropMode ? root.t("pip.crop", "Crop") + "  " : "") + Math.round(root.gw) + " × " + Math.round(root.gh)
         }
       }
     }
@@ -403,49 +521,6 @@ Item {
         }
       }
 
-      // Resize grip in the corner facing the middle of the screen.
-      Text {
-        id: grip
-        textFormat: Text.PlainText
-        text: Model.GLYPHS.resize
-        color: "white"
-        style: Text.Outline
-        styleColor: Qt.rgba(0, 0, 0, 0.6)
-        font.family: Style.font.family
-        font.pixelSize: Style.font.iconLarge
-        // In the free corner: opposite the edges the PiP is anchored to.
-        x: root.anchorRight ? Style.space(4) : parent.width - width - Style.space(4)
-        y: root.anchorBottom ? Style.space(36) : parent.height - height - Style.space(4)
-        rotation: root.anchorRight ? (root.anchorBottom ? 180 : 90) : (root.anchorBottom ? -90 : 0)
-        MouseArea {
-          anchors.fill: parent
-          anchors.margins: -6
-          hoverEnabled: true
-          cursorShape: Qt.SizeFDiagCursor
-          property real startW: 0
-          property real startX: 0
-          property real startY: 0
-          onContainsMouseChanged: root.chromeHover = containsMouse
-          onPressed: function(m) {
-            var p = mapToItem(null, m.x, m.y)
-            startX = p.x; startY = p.y; startW = root.gw
-            root.resizing = true
-          }
-          onPositionChanged: function(m) {
-            if (!pressed) return
-            var p = mapToItem(null, m.x, m.y)
-            var dx = (p.x - startX) * (root.anchorRight ? -1 : 1)
-            var dy = (p.y - startY) * (root.anchorBottom ? -1 : 1)
-            var d = Math.abs(dx) > Math.abs(dy * root.aspect) ? dx : dy * root.aspect
-            var w = Math.max(Model.MIN_WIDTH, Math.min(root.hostW, startW + d))
-            // Keep the far corner still.
-            if (root.anchorRight) root.gx = root.gx + root.gw - w
-            if (root.anchorBottom) root.gy = root.gy + root.gh - w / root.aspect
-            root.gw = w
-          }
-          onReleased: { root.resizing = false; root.commitGeometry() }
-        }
-      }
     }
 
     // A ring that ripples out when a PiP lands.
@@ -515,7 +590,7 @@ Item {
         if (root.service) root.service.updatePip(root.pipId, { opacity: o })
         return
       }
-      var nw = Math.max(Model.MIN_WIDTH, Math.min(root.hostW, root.gw * (1 + steps * 0.08)))
+      var nw = Math.max(Model.MIN_WIDTH, Math.min(root.layerW, root.gw * (1 + steps * 0.08)))
       if (root.anchorRight) root.gx = root.gx + root.gw - nw
       if (root.anchorBottom) root.gy = root.gy + root.gh - nw / root.aspect
       root.gw = nw
@@ -524,6 +599,71 @@ Item {
   }
 
   Timer { id: commitTimer; interval: 350; onTriggered: root.commitGeometry() }
+
+  property string resizeKey: ""
+  property bool cropMode: false
+  property var resizeStart: null
+
+  function beginResize(key, px, py, crop) {
+    if (!pip) return
+    // Take over the size the PiP shows right now, grown or not, so nothing
+    // jumps under the pointer.
+    var bx = x, by = y, bw = cardW
+    growSnap = true
+    resizing = true
+    gx = bx; gy = by; gw = bw
+    growSnap = false
+    resizeKey = key
+    cropMode = !!crop
+    resizeStart = { px: px, py: py, x: bx, y: by, w: bw, h: bw / aspect, crop: root.crop }
+  }
+
+  function updateResize(px, py) {
+    var s = resizeStart
+    if (!s) return
+    var dx = px - s.px, dy = py - s.py
+    var k = resizeKey
+    var L = k.indexOf("l") >= 0, R = k.indexOf("r") >= 0, T = k.indexOf("t") >= 0, B = k.indexOf("b") >= 0
+    if (cropMode) {
+      var c = s.crop
+      var minH = 40
+      var w = s.w, h = s.h, nc = { x: c.x, y: c.y, w: c.w, h: c.h }
+      if (R) { w = Math.max(Model.MIN_WIDTH, Math.min(s.w * (1 - c.x) / c.w, s.w + dx)); nc.w = c.w * w / s.w }
+      if (L) { w = Math.max(Model.MIN_WIDTH, Math.min(s.w * (c.x + c.w) / c.w, s.w - dx)); nc.w = c.w * w / s.w; nc.x = c.x + c.w - nc.w }
+      if (B) { h = Math.max(minH, Math.min(s.h * (1 - c.y) / c.h, s.h + dy)); nc.h = c.h * h / s.h }
+      if (T) { h = Math.max(minH, Math.min(s.h * (c.y + c.h) / c.h, s.h - dy)); nc.h = c.h * h / s.h; nc.y = c.y + c.h - nc.h }
+      liveCrop = Model.normalizeCrop(nc)
+      liveAspect = w / h
+      gw = w
+      gx = L ? s.x + s.w - w : s.x
+      gy = T ? s.y + s.h - h : s.y
+      return
+    }
+    var a = s.w / s.h
+    var cw = R ? s.w + dx : (L ? s.w - dx : s.w)
+    var ch = B ? s.h + dy : (T ? s.h - dy : s.h)
+    var nw = (L || R) && (T || B) ? Math.max(cw, ch * a) : ((L || R) ? cw : ch * a)
+    nw = Math.max(Model.MIN_WIDTH, Math.min(layerW, nw))
+    var nh = nw / a
+    gw = nw
+    gx = L ? s.x + s.w - nw : ((T || B) && !(L || R) ? s.x + (s.w - nw) / 2 : s.x)
+    gy = T ? s.y + s.h - nh : ((L || R) && !(T || B) ? s.y + (s.h - nh) / 2 : s.y)
+  }
+
+  function endResize() {
+    if (!resizing) return
+    if (cropMode && liveCrop && service && pip) {
+      service.updatePip(pipId, { crop: liveCrop, aspect: liveAspect })
+    }
+    liveCrop = null
+    liveAspect = 0
+    cropMode = false
+    resizeKey = ""
+    resizeStart = null
+    sizedThisHover = true
+    resizing = false
+    commitGeometry()
+  }
 
   // Save the position after a drag, resize or wheel: snapped, clamped.
   function commitGeometry() {
