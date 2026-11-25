@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.avillagran.omapip",
+  "name": "OmaPiP",
+  "version": "0.1.0",
+  "author": "Andrés Villagrán",
+  "license": "MIT",
+  "description": "Live picture-in-picture of any window or screen region: pick it, and it floats above everything, on every workspace or just one, or tucks into the bar as a live thumbnail.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "OmaPiP",
+    "description": "Picture-in-picture of any window or region, with docked PiPs as live thumbnails.",
+    "category": "Desktop",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

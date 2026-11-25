@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Tests for PipModel.js (in Node) and a check that every catalog is valid
+# JSON with the same keys as English. Nothing here touches the filesystem
+# outside the repository.
+
+set -uo pipefail
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+failures=0
+pass() { printf 'ok   %s\n' "$1"; }
+fail() { printf 'FAIL %s\n' "$1"; failures=$((failures + 1)); }
+
+for f in "$root"/i18n/*.json "$root"/manifest.json; do
+  if jq empty "$f" 2>/dev/null; then pass "$(basename "$f") is valid JSON"; else fail "$(basename "$f") is not valid JSON"; fi
+done
+
+en_keys=$(jq -r 'keys[]' "$root/i18n/en.json" | sort)
+for f in "$root"/i18n/*.json; do
+  [[ $(jq -r 'keys[]' "$f" | sort) == "$en_keys" ]] && pass "$(basename "$f") has the English keys" || fail "$(basename "$f") keys differ from en.json"
+done
+
+if command -v node >/dev/null 2>&1; then
+  node "$root/tests/model.test.js" && pass "PipModel.js" || fail "PipModel.js"
+else
+  echo "skip PipModel.js (node not installed)"
+fi
+
+if ((failures)); then
+  echo "$failures failed"
+  exit 1
+fi
+echo "all passed"
