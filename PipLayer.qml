@@ -66,7 +66,7 @@ PanelWindow {
   exclusionMode: ExclusionMode.Ignore
   WlrLayershell.layer: settings.layer === "overlay" ? WlrLayer.Overlay : WlrLayer.Top
   WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-  WlrLayershell.namespace: "omapip"
+  WlrLayershell.namespace: "moonlet"
 
   // Input only where a PiP or the peek is.
   mask: Region {

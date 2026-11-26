@@ -2,7 +2,7 @@
 # Copies the working tree into the shell's plugin directory for live testing.
 set -euo pipefail
 src=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-dest="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/io.github.avillagran.omapip"
+dest="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/io.github.avillagran.moonlet"
 mkdir -p "$dest"
 rsync -a --delete --exclude .git --exclude scripts --exclude tests "$src/" "$dest/"
 echo "synced to $dest"

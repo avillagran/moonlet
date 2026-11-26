@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "io.github.avillagran.omapip",
-  "name": "OmaPiP",
+  "id": "io.github.avillagran.moonlet",
+  "name": "Moonlet",
   "version": "0.1.0",
   "author": "Andrés Villagrán",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "barWidget": "BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "OmaPiP",
+    "displayName": "Moonlet",
     "description": "Picture-in-picture of any window or region, with docked PiPs as live thumbnails.",
     "category": "Desktop",
     "allowMultiple": false,

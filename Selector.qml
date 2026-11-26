@@ -109,7 +109,7 @@ Item {
     id: overlay
     shownLayer: WlrLayer.Overlay
     shownKeyboardFocus: WlrKeyboardFocus.Exclusive
-    WlrLayershell.namespace: "omapip-picker"
+    WlrLayershell.namespace: "moonlet-picker"
 
     onContentRevealedChanged: if (contentRevealed) { root.loadWindows(); reload.restart(); keys.forceActiveFocus() }
 

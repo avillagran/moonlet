@@ -6,7 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "PipModel.js" as Model
 
-// OmaPiP: live picture-in-picture of any window or screen region.
+// Moonlet: live picture-in-picture of any window or screen region.
 //
 // Owns the PiPs and their settings, follows Hyprland's windows, hosts one
 // transparent layer per monitor for the floating PiPs, the picker, and the
@@ -21,10 +21,10 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string pluginId: "io.github.avillagran.omapip"
+  readonly property string pluginId: "io.github.avillagran.moonlet"
   readonly property string home: Quickshell.env("HOME")
-  readonly property string configPath: (Quickshell.env("XDG_CONFIG_HOME") || home + "/.config") + "/omapip/settings.json"
-  readonly property string statePath: (Quickshell.env("XDG_STATE_HOME") || home + "/.local/state") + "/omapip/pips.json"
+  readonly property string configPath: (Quickshell.env("XDG_CONFIG_HOME") || home + "/.config") + "/moonlet/settings.json"
+  readonly property string statePath: (Quickshell.env("XDG_STATE_HOME") || home + "/.local/state") + "/moonlet/pips.json"
 
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
   readonly property alias strings: strings
@@ -269,7 +269,7 @@ Item {
   }
 
   function notify(text) {
-    Quickshell.execDetached(["omarchy-notification-send", "--app-name", "OmaPiP", "-g", Model.GLYPHS.pip, "OmaPiP", String(text)])
+    Quickshell.execDetached(["omarchy-notification-send", "--app-name", "Moonlet", "-g", Model.GLYPHS.pip, "Moonlet", String(text)])
   }
 
   function monitorRect(name) {
@@ -567,13 +567,28 @@ Item {
     // are gone by now are dropped once the window list is known.
     pips = state.pips
     stateLoaded = true
+    Hyprland.refreshToplevels()
+    pruneTimer.lastCount = -1
+    pruneTimer.checks = 0
     pruneTimer.restart()
   }
 
+  // Right after a shell restart the window list fills in over a few
+  // moments; pruning against a half-known list dropped PiPs of windows that
+  // were still there. Wait until it holds steady first.
   Timer {
     id: pruneTimer
+    property int lastCount: -1
+    property int checks: 0
     interval: 1500
     onTriggered: {
+      var n = Hyprland.toplevels.values.length
+      if ((n === 0 || n !== lastCount) && checks < 20) {
+        lastCount = n
+        checks++
+        restart()
+        return
+      }
       var keep = root.pips.filter(function(p) { return p.kind !== "window" || !!root.toplevelMap[p.address] })
       if (keep.length !== root.pips.length) root.setPips(keep)
     }
@@ -596,9 +611,9 @@ Item {
   }
 
   // ---------------------------------------------------------------- IPC
-  // omarchy-shell omapip <method>
+  // omarchy-shell moonlet <method>
   ShellIpc {
-    target: "omapip"
+    target: "moonlet"
 
     function pick(): void { root.pick() }
     function toggle(): void { root.toggleAll() }

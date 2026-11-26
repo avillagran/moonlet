@@ -1,8 +1,8 @@
-# OmaPiP
+# Moonlet
 
 Live picture-in-picture for anything on your Omarchy desktop: a whole window, a corner of a window, or any region of the screen. Pick it and it floats above everything in a small live window. A terminal running a build, a game, a video in the browser, a dashboard, a chat: if it's on screen, it can be a PiP.
 
-![OmaPiP](preview.png)
+![Moonlet](preview.png)
 
 ## See it
 
@@ -34,7 +34,7 @@ Live picture-in-picture for anything on your Omarchy desktop: a whole window, a 
 
 | Panel | Settings |
 | --- | --- |
-| ![The OmaPiP panel](docs/screenshots/panel.jpg) | ![The settings list](docs/screenshots/settings.jpg) |
+| ![The Moonlet panel](docs/screenshots/panel.jpg) | ![The settings list](docs/screenshots/settings.jpg) |
 
 ## What it does
 
@@ -71,30 +71,30 @@ A PiP set to **click through** lets every click pass to what is underneath. Turn
 
 ### Keyboard shortcuts
 
-OmaPiP answers on the shell's IPC, so any key can drive it. For example, in `~/.config/hypr/bindings.lua`:
+Moonlet answers on the shell's IPC, so any key can drive it. For example, in `~/.config/hypr/bindings.lua`:
 
 ```lua
-o.bind("SUPER + ALT + P", "New PiP", "omarchy-shell omapip pick")
-o.bind("SUPER + ALT + O", "Dock or show PiPs", "omarchy-shell omapip toggle")
+o.bind("SUPER + ALT + P", "New PiP", "omarchy-shell moonlet pick")
+o.bind("SUPER + ALT + O", "Dock or show PiPs", "omarchy-shell moonlet toggle")
 -- A fixed PiP: the top of the window titled "htop"
-o.bind("SUPER + ALT + H", "htop PiP", "omarchy-shell omapip add title:htop 0,0,840,80")
+o.bind("SUPER + ALT + H", "htop PiP", "omarchy-shell moonlet add title:htop 0,0,840,80")
 ```
 
 | Command | What it does |
 | --- | --- |
-| `omarchy-shell omapip pick` | Open the picker |
-| `omarchy-shell omapip toggle` | Dock every PiP, or show them all |
-| `omarchy-shell omapip dockAll` / `showAll` / `closeAll` | What they say |
-| `omarchy-shell omapip add <target> [x,y,w,h]` | A PiP without the picker. Target: `screen`, `screen:NAME`, a window address, `class:TEXT` or `title:TEXT`. The rectangle is inside the window or screen, in logical pixels; leave it out for all of it. Prints the new PiP's id |
-| `omarchy-shell omapip dock <id>` / `undock <id>` / `close <id>` / `sticky <id>` | Act on one PiP |
-| `omarchy-shell omapip place <id> <x> <y> <width>` | Move and size a PiP (empty values keep the current one) |
-| `omarchy-shell omapip list` | The PiPs, with their positions, as JSON |
-| `omarchy-shell omapip settings` | The settings, as JSON |
-| `omarchy-shell omapip set <key> <value>` | Change a setting |
+| `omarchy-shell moonlet pick` | Open the picker |
+| `omarchy-shell moonlet toggle` | Dock every PiP, or show them all |
+| `omarchy-shell moonlet dockAll` / `showAll` / `closeAll` | What they say |
+| `omarchy-shell moonlet add <target> [x,y,w,h]` | A PiP without the picker. Target: `screen`, `screen:NAME`, a window address, `class:TEXT` or `title:TEXT`. The rectangle is inside the window or screen, in logical pixels; leave it out for all of it. Prints the new PiP's id |
+| `omarchy-shell moonlet dock <id>` / `undock <id>` / `close <id>` / `sticky <id>` | Act on one PiP |
+| `omarchy-shell moonlet place <id> <x> <y> <width>` | Move and size a PiP (empty values keep the current one) |
+| `omarchy-shell moonlet list` | The PiPs, with their positions, as JSON |
+| `omarchy-shell moonlet settings` | The settings, as JSON |
+| `omarchy-shell moonlet set <key> <value>` | Change a setting |
 
 ## Settings
 
-Open the panel and unfold **Settings**, or edit `~/.config/omapip/settings.json` (it reloads on save), or use `omarchy-shell omapip set`.
+Open the panel and unfold **Settings**, or edit `~/.config/moonlet/settings.json` (it reloads on save), or use `omarchy-shell moonlet set`.
 
 | Key | Values | Default |
 | --- | --- | --- |
@@ -122,28 +122,28 @@ Open the panel and unfold **Settings**, or edit `~/.config/omapip/settings.json`
 ## Install
 
 ```sh
-omarchy plugin add https://github.com/avillagran/omapip --enable
+omarchy plugin add https://github.com/avillagran/moonlet --enable
 ```
 
 The bar icon goes to the right section; move it like any other widget.
 
 ### Requirements
 
-Omarchy 4.x with its Quickshell shell and Hyprland. Everything OmaPiP uses ships with Omarchy: Quickshell's screen capture, `omarchy-shell`, and `omarchy-notification-send`. Node.js is needed only to run the tests.
+Omarchy 4.x with its Quickshell shell and Hyprland. Everything Moonlet uses ships with Omarchy: Quickshell's screen capture, `omarchy-shell`, and `omarchy-notification-send`. Node.js is needed only to run the tests.
 
 ## Remove
 
 ```sh
-omarchy plugin remove io.github.avillagran.omapip
+omarchy plugin remove io.github.avillagran.moonlet
 ```
 
-Then delete `~/.config/omapip/` and `~/.local/state/omapip/` if you want its settings and saved PiPs gone too.
+Then delete `~/.config/moonlet/` and `~/.local/state/moonlet/` if you want its settings and saved PiPs gone too.
 
 ## What it does on your system
 
 - Captures windows and screen regions with Quickshell's built-in screen copy, inside the shell, only while a PiP, thumbnail or preview shows them. Nothing is recorded, saved to disk, or sent anywhere.
 - Reads the window list from Hyprland to know which window is where, and asks Hyprland to focus a window when you double-click its PiP.
-- Writes two files: `~/.config/omapip/settings.json` and `~/.local/state/omapip/pips.json` (which windows and regions you have as PiPs, and where). PiPs of windows that no longer exist are dropped from it.
+- Writes two files: `~/.config/moonlet/settings.json` and `~/.local/state/moonlet/pips.json` (which windows and regions you have as PiPs, and where). PiPs of windows that no longer exist are dropped from it.
 - Sends one notification, with fixed text, if you try to open more than 12 PiPs.
 - Runs no other commands and makes no network requests.
 

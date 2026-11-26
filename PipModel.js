@@ -1,6 +1,6 @@
 .pragma library
 
-// Pure logic for OmaPiP: settings, the shape of a PiP, geometry and crops.
+// Pure logic for Moonlet: settings, the shape of a PiP, geometry and crops.
 // No QML types here, so tests/model.test.js can load it in Node.
 
 var VERSION = 1

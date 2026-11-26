@@ -13,13 +13,13 @@ import "PipModel.js" as Model
 // PiP and holds the cfg.
 Panel {
   id: root
-  moduleName: "io.github.avillagran.omapip"
-  ipcTarget: "io.github.avillagran.omapip"
+  moduleName: "io.github.avillagran.moonlet"
+  ipcTarget: "io.github.avillagran.moonlet"
 
   Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
 
   readonly property var service: bar && bar.shell && typeof bar.shell.serviceFor === "function"
-    ? bar.shell.serviceFor("io.github.avillagran.omapip") : null
+    ? bar.shell.serviceFor("io.github.avillagran.moonlet") : null
   readonly property var cfg: service ? service.settings : Model.normalizeSettings({})
   readonly property var motion: service ? service.motion : Model.motion("extreme")
   readonly property var pips: service ? service.pips : []
@@ -334,7 +334,7 @@ Panel {
 
           PanelHero {
             width: parent.width
-            title: "OmaPiP"
+            title: "Moonlet"
             meta: root.pips.length === 0 ? strings.t("panel.empty")
               : strings.tn("panel.count", root.pips.length).arg(Commons.I18n.formatNumber(root.pips.length))
                 + (root.dockedPips.length > 0 ? " · " + strings.tn("panel.docked", root.dockedPips.length).arg(Commons.I18n.formatNumber(root.dockedPips.length)) : "")
